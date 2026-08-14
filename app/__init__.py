@@ -1,0 +1,1 @@
+# __init__.py tells Python: "Treat this folder (app) as a Python package."
