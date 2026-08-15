@@ -15,7 +15,7 @@ class UserCreate(BaseModel):   # UserCreate → what we ACCEPT from the frontend
     preferred_contact: str | None = None
 
 class UserResponse(BaseModel):   # UserResponse → what we SEND back to the frontend
-    id: int
+    user_id: int
     username: str
     email: str
     full_name: str
