@@ -66,4 +66,8 @@ class CommunityCreate(BaseModel):
     language: str
     gender: str
     description: str | None = None
+
+class UserLanguageCreate(BaseModel):
+    language_id: int
+    
    
