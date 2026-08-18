@@ -99,3 +99,43 @@ class CommunityMember(Base):
 
     __table_args__ = (
         UniqueConstraint("user_id", "community_id",name="uq_user_community" ), )
+
+class GroupMessage(Base):
+    __tablename__ = "group_messages"
+
+    group_message_id = Column( Integer, primary_key=True, index=True )
+    community_id = Column( Integer, ForeignKey("communities.community_id"), nullable=False )
+    sender_id = Column( Integer, ForeignKey("users.user_id"), nullable=False )
+    message = Column( Text, nullable=False )
+    created_at = Column( DateTime(timezone=True), server_default=func.now() )
+
+class HelpRequest(Base):
+    __tablename__ = "help_requests"
+
+    help_request_id = Column( Integer, primary_key=True, index=True )
+    community_id = Column( Integer, ForeignKey("communities.community_id"), nullable=False )
+    needer_id = Column( Integer, ForeignKey("users.user_id"), nullable=False )
+    helper_id = Column( Integer, ForeignKey("users.user_id"), nullable=False )
+    message = Column( Text, nullable=False )
+    status = Column( String(20), default="pending", nullable=False )
+    created_at = Column( DateTime(timezone=True), server_default=func.now() )
+    responded_at = Column( DateTime(timezone=True), nullable=True )
+
+class Conversation(Base):
+    __tablename__ = "conversations"
+
+    conversation_id = Column( Integer, primary_key=True, index=True )
+    help_request_id = Column( Integer, ForeignKey("help_requests.help_request_id"), unique=True, nullable=False )
+    created_at = Column( DateTime(timezone=True), server_default=func.now() )
+    is_active = Column( Boolean, default=True, nullable=False )
+
+class Message(Base):
+    __tablename__ = "messages"
+
+    message_id = Column( Integer, primary_key=True, index=True )
+    conversation_id = Column( Integer, ForeignKey("conversations.conversation_id"), nullable=False )
+    sender_id = Column( Integer, ForeignKey("users.user_id"), nullable=False )
+    message = Column( Text, nullable=False )
+    created_at = Column( DateTime(timezone=True), server_default=func.now() )
+    is_read = Column( Boolean, default=False, nullable=False )
+
