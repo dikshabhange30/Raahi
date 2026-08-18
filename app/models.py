@@ -21,6 +21,12 @@ class User(Base):
     profile_image = Column(String(500), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     is_active = Column(Boolean, default=True, nullable=False)
+    
+    is_admin = Column(
+    Boolean,
+    default=False,
+    nullable=False
+)
 
 
 class Language(Base):
@@ -41,7 +47,7 @@ class UserLanguage(Base):
             "user_id",
             "language_id",
             name="uq_user_language"
-        ))
+        ),)
 
 
 class HelpType(Base):
@@ -61,7 +67,7 @@ class UserHelpOffered(Base):
     help_type_id = Column( Integer, ForeignKey("help_types.help_type_id"), nullable=False )
 
     __table_args__ = (
-        UniqueConstraint( "user_id", "help_type_id", name="uq_user_help_offered")
+        UniqueConstraint( "user_id", "help_type_id", name="uq_user_help_offered"),
     )
 
 class UserHelpNeeded(Base):
@@ -72,7 +78,7 @@ class UserHelpNeeded(Base):
     help_type_id = Column( Integer, ForeignKey("help_types.help_type_id"), nullable=False )
 
     __table_args__ = (
-        UniqueConstraint( "user_id", "help_type_id", name="uq_user_help_needed"))
+        UniqueConstraint( "user_id", "help_type_id", name="uq_user_help_needed"),)
 
 
 class Community(Base):

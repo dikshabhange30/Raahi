@@ -58,4 +58,12 @@ class UserResponse(BaseModel):   # UserResponse → what we SEND back to the fro
     is_active: bool
 
     model_config = ConfigDict(from_attributes=True)
+    is_admin: bool
+
+class CommunityCreate(BaseModel):
+    name: str
+    city: str
+    language: str
+    gender: str
+    description: str | None = None
    
