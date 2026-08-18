@@ -1,5 +1,5 @@
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
  
 
 class UserCreate(BaseModel):   # UserCreate → what we ACCEPT from the frontend when registering
@@ -13,6 +13,36 @@ class UserCreate(BaseModel):   # UserCreate → what we ACCEPT from the frontend
     bio: str | None = None
     profile_image: str | None = None
     preferred_contact: str | None = None
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, password: str) -> str:
+        if len(password) < 8:
+            raise ValueError(
+                "Password must be at least 8 characters long"
+            )
+
+        if not any(char.islower() for char in password):
+            raise ValueError(
+                "Password must contain at least one lowercase letter"
+            )
+
+        if not any(char.isupper() for char in password):
+            raise ValueError(
+                "Password must contain at least one uppercase letter"
+            )
+
+        if not any(char.isdigit() for char in password):
+            raise ValueError(
+                "Password must contain at least one number"
+            )
+
+        if not any(not char.isalnum() for char in password):
+            raise ValueError(
+                "Password must contain at least one special character"
+            )
+
+        return password
 
 class UserResponse(BaseModel):   # UserResponse → what we SEND back to the frontend
     user_id: int
