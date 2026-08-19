@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from app.models import Community, CommunityMember, User
 from app.oauth2 import get_current_user, get_current_admin
-from app.schemas import CommunityCreate
+from app.schemas import CommunityCreate, CommunityMemberResponse
 
 
 router = APIRouter(
@@ -136,3 +136,52 @@ def leave_community(
     return {
         "message": "Left community successfully"
     }
+
+@router.get(
+    "/{community_id}/members",
+    response_model=list[CommunityMemberResponse]
+)
+def get_community_members(
+    community_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # Check that community exists
+    community = db.query(Community).filter(
+        Community.community_id == community_id,
+        Community.is_active == True
+    ).first()
+
+    if not community:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Community not found"
+        )
+
+    # Check that current user has joined this community
+    membership = db.query(CommunityMember).filter(
+        CommunityMember.community_id == community_id,
+        CommunityMember.user_id == current_user.user_id
+    ).first()
+
+    if not membership:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You must join this community to view its members"
+        )
+
+    # Get all members
+    members = (
+        db.query(User)
+        .join(
+            CommunityMember,
+            CommunityMember.user_id == User.user_id
+        )
+        .filter(
+            CommunityMember.community_id == community_id,
+            User.is_active == True
+        )
+        .all()
+    )
+
+    return members

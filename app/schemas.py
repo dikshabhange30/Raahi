@@ -81,3 +81,15 @@ class UserProfileUpdate(BaseModel):
     profession: str | None = None
     bio: str | None = None
     preferred_contact: str | None = None
+
+class CommunityMemberResponse(BaseModel):
+    user_id: int
+    username: str
+    full_name: str | None = None
+    gender: str | None = None
+    city: str | None = None
+    profession: str | None = None
+    bio: str | None = None
+    profile_image: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
