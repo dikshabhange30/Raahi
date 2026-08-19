@@ -144,3 +144,14 @@ class UserProfileUpdate(BaseModel):
     bio: str | None = None
     profile_image: str | None = None
     preferred_contact: str | None = None
+
+class NotificationResponse(BaseModel):
+    notification_id: int
+    user_id: int
+    title: str
+    message: str
+    notification_type: str
+    is_read: bool
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
