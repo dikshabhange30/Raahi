@@ -70,4 +70,14 @@ class CommunityCreate(BaseModel):
 class UserLanguageCreate(BaseModel):
     language_id: int
     
-   
+
+class UserHelpOfferedCreate(BaseModel):
+    help_type_id: int
+
+class UserHelpNeededCreate(BaseModel):
+    help_type_id: int
+
+class UserProfileUpdate(BaseModel):
+    profession: str | None = None
+    bio: str | None = None
+    preferred_contact: str | None = None
