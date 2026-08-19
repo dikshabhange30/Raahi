@@ -15,6 +15,8 @@ from app.routers.messages import router as messages_router
 from app.routers.group_messages import router as group_messages_router
 
 from app.routers.notifications import router as notifications_router
+
+from app.routers.admin import router as admin_router
  
 app = FastAPI()
 
@@ -27,6 +29,8 @@ app.include_router(messages_router)
 app.include_router(group_messages_router)
 
 app.include_router(notifications_router)
+
+app.include_router(admin_router)
 
 create_tables()
 
