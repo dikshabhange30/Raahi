@@ -109,11 +109,19 @@ def get_messages(
             detail="You are not part of this conversation"
         )
 
-    return db.query(Message).filter(
-        Message.conversation_id == conversation_id
+    messages = db.query(Message).filter(
+    Message.conversation_id == conversation_id
     ).order_by(
-        Message.created_at.asc()
+    Message.created_at.asc()
     ).all()
+
+    for message in messages:
+        if message.sender_id != current_user.user_id:
+            message.is_read = True
+
+    db.commit()
+
+    return messages
 
 @router.get("/my")
 def get_my_conversations(
@@ -160,3 +168,35 @@ def get_my_conversations(
         })
 
     return result
+
+@router.get("/unread-count")
+def get_unread_count(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    count = (
+        db.query(Message)
+        .join(
+            Conversation,
+            Conversation.conversation_id == Message.conversation_id
+        )
+        .join(
+            HelpRequest,
+            HelpRequest.help_request_id == Conversation.help_request_id
+        )
+        .filter(
+            Message.sender_id != current_user.user_id,
+            Message.is_read == False,
+            Conversation.is_active == True,
+            (
+                (HelpRequest.needer_id == current_user.user_id)
+                |
+                (HelpRequest.helper_id == current_user.user_id)
+            )
+        )
+        .count()
+    )
+
+    return {
+        "unread_count": count
+    }
