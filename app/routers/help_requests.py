@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
-from app.models import HelpRequest, CommunityMember, User, Conversation
+from app.models import HelpRequest, CommunityMember, User, Conversation, Notification
 from app.oauth2 import get_current_user
 from app.schemas import HelpRequestCreate, HelpRequestResponse
 
@@ -73,6 +73,16 @@ def create_help_request(
     db.commit()
     db.refresh(help_request)
 
+    notification = Notification(
+        user_id=help_request.helper_id,
+        title="New Help Request",
+        message=f"{current_user.username} requested your help.",
+        notification_type="help_request"
+    )
+    
+    db.add(notification)
+    db.commit()
+
     return help_request
 
 @router.get("/my")
@@ -126,6 +136,15 @@ def accept_help_request(
     help_request.status = "accepted"
     help_request.responded_at = datetime.now(timezone.utc)
 
+    notification = Notification(
+    user_id=help_request.needer_id,
+    title="Help Request Accepted",
+    message=f"{current_user.username} accepted your help request.",
+    notification_type="help_request_accepted"
+)
+
+    db.add(notification)
+
     conversation = Conversation(
     help_request_id=help_request.help_request_id
 )
@@ -167,6 +186,15 @@ def reject_help_request(
 
     help_request.status = "rejected"
     help_request.responded_at = datetime.now(timezone.utc)
+
+    notification = Notification(
+    user_id=help_request.needer_id,
+    title="Help Request Rejected",
+    message=f"{current_user.username} rejected your help request.",
+    notification_type="help_request_rejected"
+)
+
+    db.add(notification)
 
     db.commit()
     db.refresh(help_request)
