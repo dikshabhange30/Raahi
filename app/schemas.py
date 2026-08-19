@@ -93,3 +93,18 @@ class CommunityMemberResponse(BaseModel):
     profile_image: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+class HelpRequestCreate(BaseModel):
+    community_id: int
+    helper_id: int
+    message: str
+
+class HelpRequestResponse(BaseModel):
+    help_request_id: int
+    community_id: int
+    needer_id: int
+    helper_id: int
+    message: str
+    status: str
+
+    model_config = ConfigDict(from_attributes=True)
