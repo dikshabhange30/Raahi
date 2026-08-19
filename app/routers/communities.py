@@ -33,6 +33,35 @@ def get_communities(
         Community.is_active == True
     ).all()
 
+@router.get("/search")
+def search_communities(
+    city: str | None = None,
+    language: str | None = None,
+    gender: str | None = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    query = db.query(Community).filter(
+        Community.is_active == True
+    )
+
+    if city:
+        query = query.filter(
+            Community.city.ilike(f"%{city}%")
+        )
+
+    if language:
+        query = query.filter(
+            Community.language.ilike(f"%{language}%")
+        )
+
+    if gender:
+        query = query.filter(
+            Community.gender.ilike(f"%{gender}%")
+        )
+
+    return query.all()
+
 
 @router.get("/{community_id}")
 def get_community(
@@ -185,3 +214,4 @@ def get_community_members(
     )
 
     return members
+
