@@ -1,6 +1,8 @@
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+from fastapi import HTTPException
+
 
 from app.database import SessionLocal
 from app.models import (
@@ -262,4 +264,36 @@ def update_profile(
     return {
         "message": "Profile updated successfully"
     }
+
+@router.put(
+    "/me",
+    response_model=UserResponse
+)
+def update_my_profile(
+    profile_data: UserProfileUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    user = db.query(User).filter(
+        User.user_id == current_user.user_id
+    ).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    user.full_name = profile_data.full_name
+    user.gender = profile_data.gender
+    user.city = profile_data.city
+    user.profession = profile_data.profession
+    user.bio = profile_data.bio
+    user.profile_image = profile_data.profile_image
+    user.preferred_contact = profile_data.preferred_contact
+
+    db.commit()
+    db.refresh(user)
+
+    return user
 

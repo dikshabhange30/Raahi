@@ -45,7 +45,7 @@ class UserCreate(BaseModel):   # UserCreate → what we ACCEPT from the frontend
 
         return password
 
-class UserResponse(BaseModel):   # UserResponse → what we SEND back to the frontend
+class UserResponse(BaseModel):
     user_id: int
     username: str
     email: str
@@ -59,7 +59,6 @@ class UserResponse(BaseModel):   # UserResponse → what we SEND back to the fro
     is_active: bool
 
     model_config = ConfigDict(from_attributes=True)
-    is_admin: bool
 
 class CommunityCreate(BaseModel):
     name: str
@@ -136,3 +135,12 @@ class GroupMessageResponse(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+class UserProfileUpdate(BaseModel):
+    full_name: str | None = None
+    gender: str | None = None
+    city: str | None = None
+    profession: str | None = None
+    bio: str | None = None
+    profile_image: str | None = None
+    preferred_contact: str | None = None
