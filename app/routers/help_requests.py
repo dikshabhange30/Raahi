@@ -75,6 +75,23 @@ def create_help_request(
 
     return help_request
 
+@router.get("/my")
+def get_my_help_requests(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    requests = db.query(HelpRequest).filter(
+        (
+            (HelpRequest.needer_id == current_user.user_id)
+            |
+            (HelpRequest.helper_id == current_user.user_id)
+        )
+    ).order_by(
+        HelpRequest.created_at.desc()
+    ).all()
+
+    return requests
+
 @router.post(
     "/{help_request_id}/accept",
     response_model=HelpRequestResponse
@@ -114,6 +131,42 @@ def accept_help_request(
 )
 
     db.add(conversation)
+
+    db.commit()
+    db.refresh(help_request)
+
+    return help_request
+
+@router.post("/{help_request_id}/reject")
+def reject_help_request(
+    help_request_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    help_request = db.query(HelpRequest).filter(
+        HelpRequest.help_request_id == help_request_id
+    ).first()
+
+    if not help_request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Help request not found"
+        )
+
+    if help_request.helper_id != current_user.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the selected helper can reject this request"
+        )
+
+    if help_request.status != "pending":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Help request is no longer pending"
+        )
+
+    help_request.status = "rejected"
+    help_request.responded_at = datetime.now(timezone.utc)
 
     db.commit()
     db.refresh(help_request)
