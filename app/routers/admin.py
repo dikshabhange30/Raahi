@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
-from app.models import User
+from app.models import User, Community
 from app.auth import get_current_admin
 from app.schemas import UserResponse
 
@@ -87,4 +87,56 @@ def activate_user(
     return {
         "message": "User activated successfully",
         "user_id": user.user_id
+    }
+
+@router.patch("/communities/{community_id}/deactivate")
+def deactivate_community(
+    community_id: int,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(get_current_admin)
+):
+    community = db.query(Community).filter(
+        Community.community_id == community_id
+    ).first()
+
+    if not community:
+        raise HTTPException(
+            status_code=404,
+            detail="Community not found"
+        )
+
+    community.is_active = False
+
+    db.commit()
+    db.refresh(community)
+
+    return {
+        "message": "Community deactivated successfully",
+        "community_id": community.community_id
+    }
+
+@router.patch("/communities/{community_id}/activate")
+def activate_community(
+    community_id: int,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(get_current_admin)
+):
+    community = db.query(Community).filter(
+        Community.community_id == community_id
+    ).first()
+
+    if not community:
+        raise HTTPException(
+            status_code=404,
+            detail="Community not found"
+        )
+
+    community.is_active = True
+
+    db.commit()
+    db.refresh(community)
+
+    return {
+        "message": "Community activated successfully",
+        "community_id": community.community_id
     }

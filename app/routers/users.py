@@ -1,7 +1,7 @@
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 
 
 from app.database import SessionLocal
@@ -297,3 +297,13 @@ def update_my_profile(
 
     return user
 
+def get_current_admin(
+    current_user: User = Depends(get_current_user)
+):
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+
+    return current_user
