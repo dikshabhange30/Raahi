@@ -1,5 +1,6 @@
 
 from pydantic import BaseModel, ConfigDict, field_validator
+from datetime import datetime
  
 
 class UserCreate(BaseModel):   # UserCreate → what we ACCEPT from the frontend when registering
@@ -106,5 +107,19 @@ class HelpRequestResponse(BaseModel):
     helper_id: int
     message: str
     status: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+class MessageCreate(BaseModel):
+    message: str
+
+
+class MessageResponse(BaseModel):
+    message_id: int
+    conversation_id: int
+    sender_id: int
+    message: str
+    is_read: bool
+    created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
