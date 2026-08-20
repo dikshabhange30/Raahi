@@ -37,6 +37,8 @@ def get_communities(
 def search_communities(
     city: str | None = None,
     language: str | None = None,
+    skip: int = 0,
+    limit: int = 20,
     gender: str | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -60,7 +62,7 @@ def search_communities(
             Community.gender.ilike(f"%{gender}%")
         )
 
-    return query.all()
+    return query.offset(skip).limit(limit).all()
 
 
 @router.get("/{community_id}")

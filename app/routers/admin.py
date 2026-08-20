@@ -26,10 +26,17 @@ def get_db():
 
 @router.get("/users", response_model=list[UserResponse])
 def get_all_users(
+    skip: int = 0,
+    limit: int = 20,
     db: Session = Depends(get_db),
     current_admin: User = Depends(get_current_admin)
 ):
-    return db.query(User).all()
+    return (
+        db.query(User)
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
 
 @router.patch("/users/{user_id}/deactivate")
 def deactivate_user(

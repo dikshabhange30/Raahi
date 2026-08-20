@@ -75,19 +75,13 @@ def send_group_message(
 )
 def get_group_messages(
     community_id: int,
+    limit: int = 50,
+    before_id: int | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    community = db.query(Community).filter(
-        Community.community_id == community_id,
-        Community.is_active == True
-    ).first()
-
-    if not community:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Community not found"
-        )
+    if limit > 50:
+        limit = 50
 
     membership = db.query(CommunityMember).filter(
         CommunityMember.community_id == community_id,
@@ -97,12 +91,21 @@ def get_group_messages(
 
     if not membership:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=403,
             detail="You must join this community first"
         )
 
-    return db.query(GroupMessage).filter(
+    query = db.query(GroupMessage).filter(
         GroupMessage.community_id == community_id
-    ).order_by(
-        GroupMessage.created_at.asc()
-    ).all()
+    )
+
+    if before_id is not None:
+        query = query.filter(
+            GroupMessage.group_message_id < before_id
+        )
+
+    messages = query.order_by(
+        GroupMessage.group_message_id.desc()
+    ).limit(limit).all()
+
+    return list(reversed(messages))

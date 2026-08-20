@@ -82,17 +82,21 @@ def send_message(
 )
 def get_messages(
     conversation_id: int,
+    limit: int = 50,
+    before_id: int | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    if limit > 50:
+        limit = 50
+
     conversation = db.query(Conversation).filter(
-        Conversation.conversation_id == conversation_id,
-        Conversation.is_active == True
+        Conversation.conversation_id == conversation_id
     ).first()
 
     if not conversation:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=404,
             detail="Conversation not found"
         )
 
@@ -105,23 +109,24 @@ def get_messages(
         help_request.helper_id
     ]:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=403,
             detail="You are not part of this conversation"
         )
 
-    messages = db.query(Message).filter(
-    Message.conversation_id == conversation_id
-    ).order_by(
-    Message.created_at.asc()
-    ).all()
+    query = db.query(Message).filter(
+        Message.conversation_id == conversation_id
+    )
 
-    for message in messages:
-        if message.sender_id != current_user.user_id:
-            message.is_read = True
+    if before_id is not None:
+        query = query.filter(
+            Message.message_id < before_id
+        )
 
-    db.commit()
+    messages = query.order_by(
+        Message.message_id.desc()
+    ).limit(limit).all()
 
-    return messages
+    return list(reversed(messages))
 
 @router.get("/my")
 def get_my_conversations(
