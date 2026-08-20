@@ -147,3 +147,10 @@ def activate_community(
         "message": "Community activated successfully",
         "community_id": community.community_id
     }
+
+@router.get("/communities")
+def get_all_communities(
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(get_current_admin)
+):
+    return db.query(Community).all()
