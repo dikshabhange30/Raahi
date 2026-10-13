@@ -1,0 +1,43 @@
+Raahi — Your Community in a New City 🌍
+
+Raahi is a location- and language-based community platform designed to help people feel at home in a new city. Whether someone moves for education, an internship, or a job, Raahi helps them connect with people who share their language, interests, and community.
+
+Users can discover and join city-based communities according to their preferred language and gender eligibility, ask questions, seek local recommendations, find helpful contacts, and support other members. Users can also send personal help requests and chat privately after the recipient accepts the request.
+
+Key Features
+
+Location-Based Communities: Discover communities based on cities and preferred languages.
+
+Gender-Based Access Control: Male users can join male-only and unisex communities, while female users can join female-only and unisex communities.
+
+Community Discussions: Ask questions and exchange local information, recommendations, and contacts with community members.
+
+Help Requests & Private Chat: Request assistance from specific users and start a private conversation only after the request is accepted.
+
+Safety & Reporting: Block users, report suspicious or inappropriate behavior, and restrict access to reports so only authorized administrators can review them.
+
+Community Management: Allow administrators to create and manage communities, review reports, and block users when necessary.
+
+User Profiles & Authentication: Provide user profiles, secure login, and gender selection that cannot be changed after registration, according to the platform's intended security policy.
+
+Tech Stack
+
+Backend: Python, FastAPI
+
+Database: PostgreSQL
+
+ORM & Validation: SQLAlchemy, Pydantic
+
+Authentication: JWT-based authentication
+
+API Documentation: Swagger UI / OpenAPI
+
+Frontend: React
+
+Developer Tools: Git, GitHub
+
+Vision
+
+Raahi aims to make moving to a new city less stressful by helping people find trusted connections, useful local information, and a sense of belonging through communities they can relate to.
+
+Raahi — A familiar community, wherever life takes you.

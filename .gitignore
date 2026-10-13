@@ -1,0 +1,23 @@
+
+# Python virtual environment
+backend/venv/
+
+# Python generated files
+__pycache__/
+*.py[cod]
+
+# Secrets
+.env
+.env.*
+
+# Editor and test files
+.vscode/
+.pytest_cache/
+
+# Frontend dependencies and build files
+node_modules/
+dist/
+
+# Operating system files
+.DS_Store
+Thumbs.db
