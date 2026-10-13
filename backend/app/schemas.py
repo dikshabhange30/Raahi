@@ -66,3 +66,12 @@ class CommunityResponse(BaseModel):
     is_active: bool
 
     model_config = ConfigDict(from_attributes=True)
+
+
+
+class MembershipResponse(BaseModel):
+    id: int
+    user_id: int
+    community_id: int
+
+    model_config = ConfigDict(from_attributes=True)
