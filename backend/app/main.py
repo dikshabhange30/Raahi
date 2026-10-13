@@ -5,6 +5,7 @@ from app import models
 from app.database import Base, engine
 from app.routers.auth import router as auth_router
 from app.routers.users import router as users_router
+from app.routers.communities import router as communities_router
 
 
 app = FastAPI(
@@ -21,6 +22,7 @@ def create_tables():
 
 app.include_router(auth_router)
 app.include_router(users_router)
+app.include_router(communities_router)
 
 
 @app.get("/")
