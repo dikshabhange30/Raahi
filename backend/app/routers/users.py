@@ -15,7 +15,7 @@ from jwt.exceptions import InvalidTokenError
 from app.core.config import settings
 from app.database import get_db
 from app.models import User
-from app.schemas import UserResponse
+from app.schemas import ProfileUpdate, UserResponse
 
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -59,3 +59,40 @@ def read_current_user(
     current_user: User = Depends(get_current_user),
 ):
     return current_user
+
+
+
+@router.patch("/me", response_model=UserResponse)
+def update_current_user_profile(
+    profile_data: ProfileUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    updates = profile_data.model_dump(exclude_unset=True)
+
+    if "gender" in updates:
+        new_gender = updates["gender"]
+
+        if current_user.gender is not None and new_gender != current_user.gender:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Gender cannot be changed once set",
+            )
+
+        if new_gender is not None:
+            normalized_gender = new_gender.strip().lower()
+            if normalized_gender not in {"female", "male", "other"}:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Gender must be female, male, or other",
+                )
+            updates["gender"] = normalized_gender
+
+    for field, value in updates.items():
+        setattr(current_user, field, value)
+
+    db.commit()
+    db.refresh(current_user)
+
+    return current_user
+
