@@ -1,12 +1,24 @@
 
-
 from fastapi import FastAPI
+
+from app import models
+from app.database import Base, engine
+from app.routers.auth import router as auth_router
+
 
 app = FastAPI(
     title="Raahi API",
     description="A community platform that connects newcomers with helpful people.",
     version="1.0.0",
 )
+
+
+@app.on_event("startup")
+def create_tables():
+    Base.metadata.create_all(bind=engine)
+
+
+app.include_router(auth_router)
 
 
 @app.get("/")
