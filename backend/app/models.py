@@ -100,3 +100,41 @@ class HelpRequest(Base):
         server_default=func.now(),
         nullable=False,
     )
+
+
+
+class Conversation(Base):
+    __tablename__ = "conversations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    help_request_id = Column(
+        Integer,
+        ForeignKey("help_requests.id"),
+        unique=True,
+        nullable=False,
+    )
+    user_one_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_two_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+
+class Message(Base):
+    __tablename__ = "messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    conversation_id = Column(
+        Integer,
+        ForeignKey("conversations.id"),
+        nullable=False,
+    )
+    sender_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    content = Column(Text, nullable=False)
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
