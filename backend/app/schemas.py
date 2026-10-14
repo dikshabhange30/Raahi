@@ -118,3 +118,18 @@ class MessageResponse(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+
+class CommunityMessageCreate(BaseModel):
+    content: str = Field(min_length=1, max_length=5000)
+
+
+class CommunityMessageResponse(BaseModel):
+    id: int
+    community_id: int
+    sender_id: int
+    content: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

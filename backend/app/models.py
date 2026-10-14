@@ -138,3 +138,22 @@ class Message(Base):
         server_default=func.now(),
         nullable=False,
     )
+
+
+
+class CommunityMessage(Base):
+    __tablename__ = "community_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    community_id = Column(
+        Integer,
+        ForeignKey("communities.id"),
+        nullable=False,
+    )
+    sender_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    content = Column(Text, nullable=False)
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )

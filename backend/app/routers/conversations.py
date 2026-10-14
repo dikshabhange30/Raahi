@@ -14,7 +14,7 @@ from app.schemas import (
 )
 from app.routers.users import get_current_user
 
-router = APIRouter(prefix="/conversations", tags=["Conversations"])
+router = APIRouter(prefix="/conversations", tags=["Private Conversations"])
 
 
 def get_participant_conversation(
