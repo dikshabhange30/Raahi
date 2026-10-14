@@ -133,3 +133,22 @@ class CommunityMessageResponse(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+
+class UserReportCreate(BaseModel):
+    reported_user_id: int
+    community_id: int | None = None
+    reason: str = Field(min_length=5, max_length=1000)
+
+
+class UserReportResponse(BaseModel):
+    id: int
+    reporter_id: int
+    reported_user_id: int
+    community_id: int | None
+    reason: str
+    status: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
