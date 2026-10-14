@@ -6,15 +6,38 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Conversation, Message, HelpRequest, User
+from app.models import Conversation, Message, HelpRequest, User, UserBlock
 from app.schemas import (
     ConversationResponse,
     MessageCreate,
     MessageResponse,
+    
 )
 from app.routers.users import get_current_user
 
 router = APIRouter(prefix="/conversations", tags=["Private Conversations"])
+
+
+
+def ensure_not_blocked(user_one_id: int, user_two_id: int, db: Session):
+    block = db.query(UserBlock).filter(
+        (
+            (UserBlock.blocker_id == user_one_id)
+            & (UserBlock.blocked_id == user_two_id)
+        )
+        | (
+            (UserBlock.blocker_id == user_two_id)
+            & (UserBlock.blocked_id == user_one_id)
+        )
+    ).first()
+
+    if block:
+        raise HTTPException(
+            status_code=403,
+            detail="Private interaction is unavailable because one user has blocked the other.",
+        )
+
+
 
 
 def get_participant_conversation(
@@ -29,6 +52,14 @@ def get_participant_conversation(
 
     if user_id not in (conversation.user_one_id, conversation.user_two_id):
         raise HTTPException(status_code=403, detail="Access denied.")
+
+    other_user_id = (
+        conversation.user_two_id
+        if conversation.user_one_id == user_id
+        else conversation.user_one_id
+    )
+
+    ensure_not_blocked(user_id, other_user_id, db)
 
     return conversation
 
@@ -74,6 +105,11 @@ def create_conversation(
             status_code=400,
             detail="The help request must be accepted first.",
         )
+
+    ensure_not_blocked(
+    help_request.sender_id,
+    help_request.recipient_id,
+    db,)
 
     conversation = (
         db.query(Conversation)
@@ -144,3 +180,5 @@ def send_message(
     db.refresh(message)
 
     return message
+
+
