@@ -78,3 +78,25 @@ class CommunityMember(Base):
         server_default=func.now(),
         nullable=False,
     )
+
+
+
+class HelpRequest(Base):
+    __tablename__ = "help_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    sender_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    recipient_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    community_id = Column(Integer, ForeignKey("communities.id"), nullable=False)
+
+    message = Column(String(1000), nullable=False)
+
+    # pending -> accepted or rejected
+    status = Column(String(20), nullable=False, default="pending")
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )

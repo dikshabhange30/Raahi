@@ -6,7 +6,7 @@
 
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
-
+from datetime import datetime
 
 class UserRegister(BaseModel):
     username: str = Field(min_length=3, max_length=50)
@@ -73,5 +73,23 @@ class MembershipResponse(BaseModel):
     id: int
     user_id: int
     community_id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class HelpRequestCreate(BaseModel):
+    recipient_id: int
+    community_id: int
+    message: str = Field(min_length=1, max_length=1000)
+
+
+class HelpRequestResponse(BaseModel):
+    id: int
+    sender_id: int
+    recipient_id: int
+    community_id: int
+    message: str
+    status: str
+    created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
