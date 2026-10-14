@@ -152,3 +152,15 @@ class UserReportResponse(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+
+class LoginOTPVerify(BaseModel):
+    email: EmailStr
+    otp: str = Field(pattern=r"^\d{6}$")
+
+
+
+class RegistrationOTPVerify(BaseModel):
+    email: EmailStr
+    otp: str = Field(pattern=r"^\d{6}$")
