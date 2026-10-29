@@ -182,3 +182,53 @@ def my_communities(
     )
 
 
+@router.get("/{community_id}/members")
+def get_community_members(
+    community_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    community = db.query(Community).filter(
+        Community.id == community_id,
+        Community.is_active == True,
+    ).first()
+
+    if not community:
+        raise HTTPException(
+            status_code=404,
+            detail="Community not found",
+        )
+
+    membership = db.query(CommunityMember).filter(
+        CommunityMember.community_id == community_id,
+        CommunityMember.user_id == current_user.id,
+    ).first()
+
+    if not membership:
+        raise HTTPException(
+            status_code=403,
+            detail="Join this community to view its members",
+        )
+
+    members = (
+        db.query(User)
+        .join(CommunityMember, CommunityMember.user_id == User.id)
+        .filter(
+            CommunityMember.community_id == community_id,
+            User.is_active == True,
+            User.id != current_user.id,
+        )
+        .all()
+    )
+
+    return [
+        {
+            "id": member.id,
+            "username": member.username,
+            "full_name": member.full_name,
+            "city": member.city,
+            "profession": member.profession,
+            "bio": member.bio,
+        }
+        for member in members
+    ]

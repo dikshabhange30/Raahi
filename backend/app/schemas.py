@@ -114,6 +114,8 @@ class MessageResponse(BaseModel):
     id: int
     conversation_id: int
     sender_id: int
+    sender_username: str
+    sender_full_name: str | None = None
     content: str
     created_at: datetime
 
@@ -129,6 +131,8 @@ class CommunityMessageResponse(BaseModel):
     id: int
     community_id: int
     sender_id: int
+    sender_username: str
+    sender_full_name: str | None = None
     content: str
     created_at: datetime
 
@@ -164,3 +168,17 @@ class LoginOTPVerify(BaseModel):
 class RegistrationOTPVerify(BaseModel):
     email: EmailStr
     otp: str = Field(pattern=r"^\d{6}$")
+
+
+from pydantic import BaseModel, EmailStr, Field
+
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetConfirm(BaseModel):
+    email: EmailStr
+    otp: str = Field(min_length=6, max_length=6, pattern=r"^\d{6}$")
+    new_password: str = Field(min_length=8, max_length=128)
+

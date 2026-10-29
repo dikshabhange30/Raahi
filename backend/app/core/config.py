@@ -12,7 +12,10 @@ class Settings(BaseSettings):
     jwt_secret: str
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
-    resend_api_key: str
+    email_host: str = "smtp.gmail.com"
+    email_port: int = 587
+    email_username: str
+    email_password: str
     email_from: str
 
     model_config = SettingsConfigDict(

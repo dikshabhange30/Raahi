@@ -1,15 +1,13 @@
 
 
-
-
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import HelpRequest, CommunityMember, User, Community
+from app.models import HelpRequest, CommunityMember, User, Community, UserBlock
 from app.schemas import HelpRequestCreate, HelpRequestResponse
 from app.routers.users import get_current_user
-
 
 
 router = APIRouter(
@@ -34,9 +32,29 @@ def create_help_request(
             detail="You cannot send a help request to yourself.",
         )
 
+    # Prevent help requests between users who have blocked each other.
+    block_exists = db.query(UserBlock).filter(
+        or_(
+            (
+                (UserBlock.blocker_id == current_user.id)
+                & (UserBlock.blocked_id == payload.recipient_id)
+            ),
+            (
+                (UserBlock.blocker_id == payload.recipient_id)
+                & (UserBlock.blocked_id == current_user.id)
+            ),
+        )
+    ).first()
+
+    if block_exists:
+        raise HTTPException(
+            status_code=403,
+            detail="Help requests are not allowed between blocked users.",
+        )
+
     community = db.query(Community).filter(
         Community.id == payload.community_id,
-        Community.is_active == True,
+        Community.is_active.is_(True),
     ).first()
 
     if not community:
@@ -47,7 +65,7 @@ def create_help_request(
 
     recipient = db.query(User).filter(
         User.id == payload.recipient_id,
-        User.is_active == True,
+        User.is_active.is_(True),
     ).first()
 
     if not recipient:
@@ -93,7 +111,10 @@ def create_help_request(
     return help_request
 
 
-@router.get("/sent", response_model=list[HelpRequestResponse])
+@router.get(
+    "/sent",
+    response_model=list[HelpRequestResponse],
+)
 def get_sent_requests(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -106,7 +127,10 @@ def get_sent_requests(
     )
 
 
-@router.get("/received", response_model=list[HelpRequestResponse])
+@router.get(
+    "/received",
+    response_model=list[HelpRequestResponse],
+)
 def get_received_requests(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -119,7 +143,10 @@ def get_received_requests(
     )
 
 
-@router.patch("/{request_id}/accept", response_model=HelpRequestResponse)
+@router.patch(
+    "/{request_id}/accept",
+    response_model=HelpRequestResponse,
+)
 def accept_help_request(
     request_id: int,
     db: Session = Depends(get_db),
@@ -145,6 +172,29 @@ def accept_help_request(
             detail="This request has already been processed.",
         )
 
+    # Recheck blocking before accepting the request.
+    block_exists = db.query(UserBlock).filter(
+        or_(
+            (
+                (UserBlock.blocker_id == help_request.sender_id)
+                & (UserBlock.blocked_id == help_request.recipient_id)
+            ),
+            (
+                (UserBlock.blocker_id == help_request.recipient_id)
+                & (UserBlock.blocked_id == help_request.sender_id)
+            ),
+        )
+    ).first()
+
+    if block_exists:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "This request cannot be accepted because "
+                "one user has blocked the other."
+            ),
+        )
+
     help_request.status = "accepted"
     db.commit()
     db.refresh(help_request)
@@ -152,7 +202,10 @@ def accept_help_request(
     return help_request
 
 
-@router.patch("/{request_id}/reject", response_model=HelpRequestResponse)
+@router.patch(
+    "/{request_id}/reject",
+    response_model=HelpRequestResponse,
+)
 def reject_help_request(
     request_id: int,
     db: Session = Depends(get_db),

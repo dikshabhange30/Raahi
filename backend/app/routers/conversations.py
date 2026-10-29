@@ -1,43 +1,37 @@
-
-
-
-
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Conversation, Message, HelpRequest, User, UserBlock
-from app.schemas import (
-    ConversationResponse,
-    MessageCreate,
-    MessageResponse,
-    
-)
+from app.schemas import ConversationResponse, MessageCreate, MessageResponse
 from app.routers.users import get_current_user
 
 router = APIRouter(prefix="/conversations", tags=["Private Conversations"])
 
 
-
 def ensure_not_blocked(user_one_id: int, user_two_id: int, db: Session):
     block = db.query(UserBlock).filter(
-        (
-            (UserBlock.blocker_id == user_one_id)
-            & (UserBlock.blocked_id == user_two_id)
-        )
-        | (
-            (UserBlock.blocker_id == user_two_id)
-            & (UserBlock.blocked_id == user_one_id)
+        or_(
+            (
+                (UserBlock.blocker_id == user_one_id)
+                & (UserBlock.blocked_id == user_two_id)
+            ),
+            (
+                (UserBlock.blocker_id == user_two_id)
+                & (UserBlock.blocked_id == user_one_id)
+            ),
         )
     ).first()
 
     if block:
         raise HTTPException(
             status_code=403,
-            detail="Private interaction is unavailable because one user has blocked the other.",
+            detail=(
+                "Private interaction is unavailable because "
+                "one user has blocked the other."
+            ),
         )
-
-
 
 
 def get_participant_conversation(
@@ -62,6 +56,18 @@ def get_participant_conversation(
     ensure_not_blocked(user_id, other_user_id, db)
 
     return conversation
+
+
+def serialize_message(message: Message, sender: User):
+    return {
+        "id": message.id,
+        "conversation_id": message.conversation_id,
+        "sender_id": message.sender_id,
+        "sender_username": sender.username,
+        "sender_full_name": sender.full_name,
+        "content": message.content,
+        "created_at": message.created_at,
+    }
 
 
 @router.get("/", response_model=list[ConversationResponse])
@@ -107,9 +113,10 @@ def create_conversation(
         )
 
     ensure_not_blocked(
-    help_request.sender_id,
-    help_request.recipient_id,
-    db,)
+        help_request.sender_id,
+        help_request.recipient_id,
+        db,
+    )
 
     conversation = (
         db.query(Conversation)
@@ -144,12 +151,18 @@ def list_messages(
 ):
     get_participant_conversation(conversation_id, current_user.id, db)
 
-    return (
-        db.query(Message)
+    rows = (
+        db.query(Message, User)
+        .join(User, Message.sender_id == User.id)
         .filter(Message.conversation_id == conversation_id)
         .order_by(Message.created_at.asc(), Message.id.asc())
         .all()
     )
+
+    return [
+        serialize_message(message, sender)
+        for message, sender in rows
+    ]
 
 
 @router.post(
@@ -167,7 +180,10 @@ def send_message(
 
     content = payload.content.strip()
     if not content:
-        raise HTTPException(status_code=422, detail="Message cannot be empty.")
+        raise HTTPException(
+            status_code=422,
+            detail="Message cannot be empty.",
+        )
 
     message = Message(
         conversation_id=conversation_id,
@@ -179,6 +195,4 @@ def send_message(
     db.commit()
     db.refresh(message)
 
-    return message
-
-
+    return serialize_message(message, current_user)

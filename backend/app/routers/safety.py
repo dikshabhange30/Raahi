@@ -1,7 +1,4 @@
 
-
-
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -18,45 +15,58 @@ def require_admin(user: User):
         raise HTTPException(status_code=403, detail="Admin access required.")
 
 
-@router.post("/block/{user_id}")
+@router.post("/block/{username}")
 def block_user(
-    user_id: int,
+    username: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    if user_id == current_user.id:
-        raise HTTPException(status_code=400, detail="You cannot block yourself.")
-
     target = db.query(User).filter(
-        User.id == user_id,
+        User.username == username,
         User.is_active == True,
     ).first()
 
     if not target:
         raise HTTPException(status_code=404, detail="User not found.")
 
+    if target.id == current_user.id:
+        raise HTTPException(status_code=400, detail="You cannot block yourself.")
+
     existing = db.query(UserBlock).filter(
         UserBlock.blocker_id == current_user.id,
-        UserBlock.blocked_id == user_id,
+        UserBlock.blocked_id == target.id,
     ).first()
 
     if existing:
         return {"message": "User is already blocked."}
 
-    db.add(UserBlock(blocker_id=current_user.id, blocked_id=user_id))
+    db.add(
+        UserBlock(
+            blocker_id=current_user.id,
+            blocked_id=target.id,
+        )
+    )
     db.commit()
+
     return {"message": "User blocked successfully."}
 
 
-@router.delete("/block/{user_id}")
+@router.delete("/block/{username}")
 def unblock_user(
-    user_id: int,
+    username: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    target = db.query(User).filter(
+        User.username == username
+    ).first()
+
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found.")
+
     block = db.query(UserBlock).filter(
         UserBlock.blocker_id == current_user.id,
-        UserBlock.blocked_id == user_id,
+        UserBlock.blocked_id == target.id,
     ).first()
 
     if not block:
@@ -64,6 +74,7 @@ def unblock_user(
 
     db.delete(block)
     db.commit()
+
     return {"message": "User unblocked successfully."}
 
 
@@ -77,7 +88,10 @@ def list_blocked_users(
     ).all()
 
     return [
-        {"user_id": block.blocked_id, "blocked_at": block.created_at}
+        {
+            "user_id": block.blocked_id,
+            "blocked_at": block.created_at,
+        }
         for block in blocks
     ]
 
@@ -111,6 +125,7 @@ def report_user(
     db.add(report)
     db.commit()
     db.refresh(report)
+
     return report
 
 
@@ -120,7 +135,10 @@ def list_reports(
     current_user: User = Depends(get_current_user),
 ):
     require_admin(current_user)
-    return db.query(UserReport).order_by(UserReport.created_at.desc()).all()
+
+    return db.query(UserReport).order_by(
+        UserReport.created_at.desc()
+    ).all()
 
 
 @router.patch("/admin/reports/{report_id}")
@@ -133,6 +151,7 @@ def update_report_status(
     require_admin(current_user)
 
     allowed_statuses = {"reviewed", "action_taken", "dismissed"}
+
     if new_status not in allowed_statuses:
         raise HTTPException(
             status_code=422,
@@ -140,13 +159,19 @@ def update_report_status(
         )
 
     report = db.get(UserReport, report_id)
+
     if not report:
         raise HTTPException(status_code=404, detail="Report not found.")
 
     report.status = new_status
     db.commit()
     db.refresh(report)
-    return {"message": "Report status updated.", "id": report.id, "status": report.status}
+
+    return {
+        "message": "Report status updated.",
+        "id": report.id,
+        "status": report.status,
+    }
 
 
 @router.patch("/admin/users/{user_id}/deactivate")
@@ -158,6 +183,7 @@ def deactivate_user(
     require_admin(current_user)
 
     target = db.get(User, user_id)
+
     if not target:
         raise HTTPException(status_code=404, detail="User not found.")
 
@@ -166,6 +192,5 @@ def deactivate_user(
 
     target.is_active = False
     db.commit()
+
     return {"message": "User deactivated successfully."}
-
-

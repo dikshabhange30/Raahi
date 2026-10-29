@@ -1,17 +1,8 @@
-
-
-
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import (
-    Community,
-    CommunityMember,
-    CommunityMessage,
-    User,
-)
+from app.models import Community, CommunityMember, CommunityMessage, User
 from app.schemas import CommunityMessageCreate, CommunityMessageResponse
 from app.routers.users import get_current_user
 
@@ -21,7 +12,7 @@ router = APIRouter(prefix="/communities", tags=["Community Chat"])
 def verify_membership(community_id: int, user_id: int, db: Session):
     community = db.query(Community).filter(
         Community.id == community_id,
-        Community.is_active == True,
+        Community.is_active.is_(True),
     ).first()
 
     if not community:
@@ -39,6 +30,18 @@ def verify_membership(community_id: int, user_id: int, db: Session):
         )
 
 
+def serialize_message(message: CommunityMessage, sender: User):
+    return {
+        "id": message.id,
+        "community_id": message.community_id,
+        "sender_id": message.sender_id,
+        "sender_username": sender.username,
+        "sender_full_name": sender.full_name,
+        "content": message.content,
+        "created_at": message.created_at,
+    }
+
+
 @router.get(
     "/{community_id}/messages",
     response_model=list[CommunityMessageResponse],
@@ -50,12 +53,18 @@ def get_community_messages(
 ):
     verify_membership(community_id, current_user.id, db)
 
-    return (
-        db.query(CommunityMessage)
+    rows = (
+        db.query(CommunityMessage, User)
+        .join(User, CommunityMessage.sender_id == User.id)
         .filter(CommunityMessage.community_id == community_id)
         .order_by(CommunityMessage.created_at.asc(), CommunityMessage.id.asc())
         .all()
     )
+
+    return [
+        serialize_message(message, sender)
+        for message, sender in rows
+    ]
 
 
 @router.post(
@@ -88,4 +97,4 @@ def send_community_message(
     db.commit()
     db.refresh(message)
 
-    return message
+    return serialize_message(message, current_user)

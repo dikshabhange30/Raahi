@@ -13,14 +13,16 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import User
+from app.models import User, LoginOTP, RegistrationOTP, PasswordResetOTP
 from app.schemas import (
     TokenResponse,
     UserLogin,
     UserRegister,
     UserResponse,
     LoginOTPVerify,
-    RegistrationOTPVerify
+    RegistrationOTPVerify,
+    PasswordResetRequest,
+    PasswordResetConfirm,
 )
 from app.security import (
     create_access_token,
@@ -354,3 +356,157 @@ def verify_registration_email(
     db.commit()
 
     return {"message": "Email verified successfully."}
+
+
+
+@router.post("/forgot-password")
+def forgot_password(
+    request: PasswordResetRequest,
+    db: Session = Depends(get_db),
+):
+    email = str(request.email)
+
+    user = db.query(User).filter(
+        User.email == email
+    ).first()
+
+    # Do not reveal whether an email is registered.
+    generic_response = {
+        "message": "If an eligible account exists, a password reset OTP has been sent."
+    }
+
+    if not user or not user.is_active or not user.is_email_verified:
+        return generic_response
+
+    now = datetime.now(timezone.utc)
+
+    # Invalidate previous unused password-reset OTPs.
+    db.query(PasswordResetOTP).filter(
+        PasswordResetOTP.user_id == user.id,
+        PasswordResetOTP.consumed_at.is_(None),
+    ).update(
+        {"consumed_at": now},
+        synchronize_session=False,
+    )
+
+    otp = f"{secrets.randbelow(1_000_000):06d}"
+
+    reset_otp = PasswordResetOTP(
+        user_id=user.id,
+        otp_hash=hash_password(otp),
+        expires_at=now + timedelta(minutes=10),
+        attempts=0,
+    )
+
+    db.add(reset_otp)
+    db.commit()
+
+    try:
+        send_otp_email(
+            to_email=user.email,
+            otp=otp,
+            purpose="password_reset",
+        )
+    except Exception:
+        reset_otp.consumed_at = datetime.now(timezone.utc)
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Unable to send password reset email. Please try again.",
+        )
+
+    return generic_response
+
+
+@router.post("/reset-password")
+def reset_password(
+    reset_data: PasswordResetConfirm,
+    db: Session = Depends(get_db),
+):
+    email = str(reset_data.email)
+
+    user = db.query(User).filter(
+        User.email == email,
+    ).first()
+
+    if not user or not user.is_active or not user.is_email_verified:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired password reset request.",
+        )
+
+    reset_otp = (
+        db.query(PasswordResetOTP)
+        .filter(
+            PasswordResetOTP.user_id == user.id,
+            PasswordResetOTP.consumed_at.is_(None),
+        )
+        .order_by(PasswordResetOTP.created_at.desc())
+        .first()
+    )
+
+    if not reset_otp:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No active password reset OTP. Request a new one.",
+        )
+
+    now = datetime.now(timezone.utc)
+    expires_at = reset_otp.expires_at
+
+    # Handle timezone-naive datetimes returned by the database.
+    if expires_at.tzinfo is None:
+        now = now.replace(tzinfo=None)
+
+    if expires_at <= now:
+        reset_otp.consumed_at = datetime.now(timezone.utc)
+        db.commit()
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="OTP expired. Request a new password reset OTP.",
+        )
+
+    if reset_otp.attempts >= 5:
+        reset_otp.consumed_at = datetime.now(timezone.utc)
+        db.commit()
+
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many incorrect attempts. Request a new OTP.",
+        )
+
+    if not verify_password(reset_data.otp, reset_otp.otp_hash):
+        reset_otp.attempts += 1
+
+        if reset_otp.attempts >= 5:
+            reset_otp.consumed_at = datetime.now(timezone.utc)
+
+        db.commit()
+
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect OTP.",
+        )
+
+    # Save the new password as a hash, never as plain text.
+    user.password_hash = hash_password(reset_data.new_password)
+
+    # Prevent the OTP from being reused.
+    reset_otp.consumed_at = datetime.now(timezone.utc)
+
+    # Invalidate other outstanding password-reset OTPs.
+    db.query(PasswordResetOTP).filter(
+        PasswordResetOTP.user_id == user.id,
+        PasswordResetOTP.id != reset_otp.id,
+        PasswordResetOTP.consumed_at.is_(None),
+    ).update(
+        {"consumed_at": datetime.now(timezone.utc)},
+        synchronize_session=False,
+    )
+
+    db.commit()
+
+    return {
+        "message": "Password reset successfully. Please log in with your new password."
+    }
